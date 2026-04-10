@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import * as echarts from 'echarts';
@@ -39,16 +39,21 @@ function ResultPage() {
   const [loading, setLoading] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   // 加载存储的数据
   useEffect(() => {
     loadIncome();
     loadTimeCost();
     loadExpenses();
+    setHasLoaded(true);
   }, []);
 
   // 计算结果
   useEffect(() => {
+    // 只有在数据加载完成后才计算
+    if (!hasLoaded) return;
+
     const calculate = debounce(() => {
       setLoading(true);
 
@@ -73,13 +78,18 @@ function ResultPage() {
     }, 300);
 
     calculate();
-  }, [income, timeCost, expenses, selectedIndustry]);
+  }, [income, timeCost, expenses, selectedIndustry, hasLoaded]);
 
-  // 自动调用分析（只在首次计算完成后）
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // 自动调用分析
   useEffect(() => {
+    console.log('Analysis useEffect triggered', { result: !!result, analysis: !!analysis, analysisLoading, incomeSalary: income.monthlySalary });
+
+    // 只有在数据加载完成且result存在且未生成分析时才调用
+    if (!hasLoaded) return;
+
     if (result && !analysis && !analysisLoading && income.monthlySalary > 0) {
       const callAnalysis = async () => {
+        console.log('Calling AI analysis...');
         setAnalysisLoading(true);
         setAnalysisError(null);
         try {
@@ -102,7 +112,6 @@ function ResultPage() {
             diffPercentage: result.industryComparison.diffPercentage,
           };
 
-          console.log('Calling AI analysis with data:', data);
           const analysisData = await generateAnalysisReport(data);
           console.log('Analysis result:', analysisData);
           setAnalysis(analysisData);
@@ -115,7 +124,7 @@ function ResultPage() {
       };
       callAnalysis();
     }
-  }, [result, income, timeCost, expenses]);
+  }, [result, income, timeCost, expenses, hasLoaded]);
 
   // 初始化ECharts图表
   useEffect(() => {
