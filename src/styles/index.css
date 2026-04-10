@@ -1104,6 +1104,21 @@ body {
   margin-bottom: var(--spacing-md);
 }
 
+.analysis-error {
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
+.error-text {
+  color: #EF4444;
+  margin-bottom: var(--spacing-xs);
+}
+
+.error-hint {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
 .card-title {
   color: var(--text-primary);
   margin-bottom: var(--spacing-md);

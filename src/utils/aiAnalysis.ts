@@ -102,12 +102,23 @@ export async function generateAnalysisReport(data: AnalysisRequest): Promise<Ana
     }
 
     const result = await response.json();
-    const content = result.choices[0].message.content;
+    console.log('API Response:', result); // Debug log
+
+    const content = result.choices?.[0]?.message?.content || '';
+    console.log('Content:', content); // Debug log
+
+    if (!content) {
+      throw new Error('API 返回内容为空');
+    }
 
     // 解析 JSON（可能包含代码块标记）
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (parseError) {
+        console.error('JSON 解析失败:', parseError);
+      }
     }
 
     // 如果解析失败，返回默认格式

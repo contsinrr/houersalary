@@ -38,6 +38,7 @@ function ResultPage() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   // 加载存储的数据
   useEffect(() => {
@@ -74,45 +75,46 @@ function ResultPage() {
     calculate();
   }, [income, timeCost, expenses, selectedIndustry]);
 
-  // 读取分析结果（当结果计算完成后）
+  // 自动调用分析（只在首次计算完成后）
   useEffect(() => {
-    if (result && !analysis) {
-      fetchAnalysis();
+    if (result && !analysis && !analysisLoading) {
+      const callAnalysis = async () => {
+        setAnalysisLoading(true);
+        setAnalysisError(null);
+        try {
+          const data = {
+            monthlySalary: income.monthlySalary,
+            bonus: income.bonus || 0,
+            takeHomePay: result.breakdown.takeHomePay,
+            yearlyTakeHome: result.wageResult.yearlyTakeHome,
+            realHourlyWage: result.wageResult.real,
+            nominalHourlyWage: result.wageResult.nominal,
+            totalYearlyWorkHours: result.wageResult.totalYearlyWorkHours,
+            dailyHours: timeCost.dailyHours,
+            averageOvertime: timeCost.averageOvertime,
+            commuteTimeOneWay: timeCost.commuteTimeOneWay,
+            monthlyCommuteCost: expenses.monthlyCommuteCost,
+            monthlyMealCost: expenses.monthlyMealCost,
+            otherExpensesTotal: expenses.otherExpenses.reduce((sum, item) => sum + item.amount, 0),
+            industry: result.industryComparison.industry,
+            industryAverage: result.industryComparison.averageHourlyWage,
+            diffPercentage: result.industryComparison.diffPercentage,
+          };
+
+          console.log('Calling AI analysis with data:', data); // Debug log
+          const analysisData = await generateAnalysisReport(data);
+          console.log('Analysis result:', analysisData); // Debug log
+          setAnalysis(analysisData);
+        } catch (error) {
+          console.error('获取分析报告失败:', error);
+          setAnalysisError(error instanceof Error ? error.message : '未知错误');
+        } finally {
+          setAnalysisLoading(false);
+        }
+      };
+      callAnalysis();
     }
   }, [result]);
-
-  const fetchAnalysis = async () => {
-    if (!result) return;
-
-    setAnalysisLoading(true);
-    try {
-      const data = {
-        monthlySalary: income.monthlySalary,
-        bonus: income.bonus || 0,
-        takeHomePay: result.breakdown.takeHomePay,
-        yearlyTakeHome: result.wageResult.yearlyTakeHome,
-        realHourlyWage: result.wageResult.real,
-        nominalHourlyWage: result.wageResult.nominal,
-        totalYearlyWorkHours: result.wageResult.totalYearlyWorkHours,
-        dailyHours: timeCost.dailyHours,
-        averageOvertime: timeCost.averageOvertime,
-        commuteTimeOneWay: timeCost.commuteTimeOneWay,
-        monthlyCommuteCost: expenses.monthlyCommuteCost,
-        monthlyMealCost: expenses.monthlyMealCost,
-        otherExpensesTotal: expenses.otherExpenses.reduce((sum, item) => sum + item.amount, 0),
-        industry: result.industryComparison.industry,
-        industryAverage: result.industryComparison.averageHourlyWage,
-        diffPercentage: result.industryComparison.diffPercentage,
-      };
-
-      const analysisData = await generateAnalysisReport(data);
-      setAnalysis(analysisData);
-    } catch (error) {
-      console.error('获取分析报告失败:', error);
-    } finally {
-      setAnalysisLoading(false);
-    }
-  };
 
   // 初始化ECharts图表
   useEffect(() => {
@@ -474,16 +476,19 @@ function ResultPage() {
                 </ul>
               </div>
             </div>
+          ) : analysisError ? (
+            <div className="analysis-error">
+              <p className="error-text">生成分析报告失败: {analysisError}</p>
+              <p className="error-hint">请检查网络连接或稍后重试</p>
+            </div>
           ) : (
             <div className="analysis-empty">
-              <p>数据已就绪，点击「生成解读」获取 AI 分析报告</p>
-              <button
-                className="btn btn-primary"
-                onClick={fetchAnalysis}
-                style={{ marginTop: '16px' }}
-              >
-                🤖 生成解读报告
-              </button>
+              <div className="loading-spinner">
+                <div className="spinner-circle"></div>
+                <div className="spinner-circle"></div>
+                <div className="spinner-circle"></div>
+              </div>
+              <p className="text-center">正在生成 AI 解读报告...</p>
             </div>
           )}
         </motion.div>
