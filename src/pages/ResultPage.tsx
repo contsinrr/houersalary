@@ -16,6 +16,7 @@ import {
   getRatingMessage
 } from '../utils/calculateWage';
 import { INDUSTRY_DATA } from '../utils/calculateWage';
+import { generateAnalysisReport, AnalysisResult } from '../utils/aiAnalysis';
 
 // 防抖函数
 function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
@@ -34,7 +35,9 @@ function ResultPage() {
 
   const [selectedIndustry, setSelectedIndustry] = useState('internet');
   const [result, setResult] = useState<any>(null);
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
 
   // 加载存储的数据
   useEffect(() => {
@@ -70,6 +73,46 @@ function ResultPage() {
 
     calculate();
   }, [income, timeCost, expenses, selectedIndustry]);
+
+  // 读取分析结果（当结果计算完成后）
+  useEffect(() => {
+    if (result && !analysis) {
+      fetchAnalysis();
+    }
+  }, [result]);
+
+  const fetchAnalysis = async () => {
+    if (!result) return;
+
+    setAnalysisLoading(true);
+    try {
+      const data = {
+        monthlySalary: income.monthlySalary,
+        bonus: income.bonus || 0,
+        takeHomePay: result.breakdown.takeHomePay,
+        yearlyTakeHome: result.wageResult.yearlyTakeHome,
+        realHourlyWage: result.wageResult.real,
+        nominalHourlyWage: result.wageResult.nominal,
+        totalYearlyWorkHours: result.wageResult.totalYearlyWorkHours,
+        dailyHours: timeCost.dailyHours,
+        averageOvertime: timeCost.averageOvertime,
+        commuteTimeOneWay: timeCost.commuteTimeOneWay,
+        monthlyCommuteCost: expenses.monthlyCommuteCost,
+        monthlyMealCost: expenses.monthlyMealCost,
+        otherExpensesTotal: expenses.otherExpenses.reduce((sum, item) => sum + item.amount, 0),
+        industry: result.industryComparison.industry,
+        industryAverage: result.industryComparison.averageHourlyWage,
+        diffPercentage: result.industryComparison.diffPercentage,
+      };
+
+      const analysisData = await generateAnalysisReport(data);
+      setAnalysis(analysisData);
+    } catch (error) {
+      console.error('获取分析报告失败:', error);
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
 
   // 初始化ECharts图表
   useEffect(() => {
@@ -155,9 +198,7 @@ function ResultPage() {
 
   const handleReset = () => {
     if (window.confirm('确定要清空所有数据吗？')) {
-      // 清空localStorage
       localStorage.removeItem('salary_calculator_data');
-      // 重新加载默认数据
       window.location.reload();
     }
   };
@@ -384,6 +425,67 @@ function ResultPage() {
               <li>✓ 工作相关支出（通勤、餐费等）</li>
             </ul>
           </div>
+        </motion.div>
+
+        {/* AI 解读报告 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="card"
+        >
+          <h3 className="card-title">✨ AI 职场解读</h3>
+          {analysisLoading ? (
+            <div className="analysis-loading">
+              <div className="loading-spinner">
+                <div className="spinner-circle"></div>
+                <div className="spinner-circle"></div>
+                <div className="spinner-circle"></div>
+              </div>
+              <p className="text-center">AI 正在为你生成独家解读...</p>
+            </div>
+          ) : analysis ? (
+            <div className="ai-analysis-content">
+              {/* 工资情况描述 */}
+              <div className="analysis-section">
+                <h4>💰 工资情况</h4>
+                <p className="analysis-text">{analysis.salaryDescription}</p>
+              </div>
+
+              {/* 同行业对比 */}
+              <div className="analysis-section">
+                <h4>📊 同行业对比</h4>
+                <p className="analysis-text">{analysis.industryComparison}</p>
+              </div>
+
+              {/* 未来增长空间 */}
+              <div className="analysis-section">
+                <h4>🚀 未来增长空间</h4>
+                <p className="analysis-text">{analysis.growthPotential}</p>
+              </div>
+
+              {/* 建议 */}
+              <div className="analysis-section">
+                <h4>💡 小王的建议</h4>
+                <ul className="suggestions-list">
+                  {analysis.suggestions.map((suggestion, idx) => (
+                    <li key={idx}> {suggestion}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <div className="analysis-empty">
+              <p>数据已就绪，点击「生成解读」获取 AI 分析报告</p>
+              <button
+                className="btn btn-primary"
+                onClick={fetchAnalysis}
+                style={{ marginTop: '16px' }}
+              >
+                🤖 生成解读报告
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>
