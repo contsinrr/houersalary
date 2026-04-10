@@ -76,8 +76,9 @@ function ResultPage() {
   }, [income, timeCost, expenses, selectedIndustry]);
 
   // 自动调用分析（只在首次计算完成后）
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (result && !analysis && !analysisLoading) {
+    if (result && !analysis && !analysisLoading && income.monthlySalary > 0) {
       const callAnalysis = async () => {
         setAnalysisLoading(true);
         setAnalysisError(null);
@@ -101,9 +102,9 @@ function ResultPage() {
             diffPercentage: result.industryComparison.diffPercentage,
           };
 
-          console.log('Calling AI analysis with data:', data); // Debug log
+          console.log('Calling AI analysis with data:', data);
           const analysisData = await generateAnalysisReport(data);
-          console.log('Analysis result:', analysisData); // Debug log
+          console.log('Analysis result:', analysisData);
           setAnalysis(analysisData);
         } catch (error) {
           console.error('获取分析报告失败:', error);
@@ -114,7 +115,7 @@ function ResultPage() {
       };
       callAnalysis();
     }
-  }, [result]);
+  }, [result, income, timeCost, expenses]);
 
   // 初始化ECharts图表
   useEffect(() => {
