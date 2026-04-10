@@ -468,7 +468,7 @@ function ResultPage() {
               <div className="analysis-section">
                 <h4>💡 小王的建议</h4>
                 <ul className="suggestions-list">
-                  {analysis.suggestions.map((suggestion, idx) => (
+                  {analysis.suggestions.map((suggestion: string, idx: number) => (
                     <li key={idx}> {suggestion}</li>
                   ))}
                 </ul>

@@ -19,7 +19,7 @@ interface AnalysisRequest {
 }
 
 // 分析结果
-interface AnalysisResult {
+export interface AnalysisResult {
   salaryDescription: string;
   industryComparison: string;
   growthPotential: string;
@@ -117,10 +117,11 @@ export async function generateAnalysisReport(data: AnalysisRequest): Promise<Ana
       growthPotential: '持续提升技能是核心竞争力',
       suggestions: ['好好工作', '注意休息', '合理规划财务', '保持学习'],
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('生成分析报告失败:', error);
+    const errorMessage = error instanceof Error ? error.message : '未知错误';
     return {
-      salaryDescription: ` failed to generate report: ${error.message}`,
+      salaryDescription: `生成报告失败: ${errorMessage}`,
       industryComparison: '请稍后重试',
       growthPotential: '建议优先解决网络问题',
       suggestions: ['刷新页面', '检查网络连接', '稍后重试'],
