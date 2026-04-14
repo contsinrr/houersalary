@@ -80,51 +80,41 @@ function ResultPage() {
     calculate();
   }, [income, timeCost, expenses, selectedIndustry, hasLoaded]);
 
-  // 自动调用分析
-  useEffect(() => {
-    console.log('Analysis useEffect triggered', { result: !!result, analysis: !!analysis, analysisLoading, incomeSalary: income.monthlySalary });
+  // 手动调用 AI 分析
+  const handleGenerateAnalysis = async () => {
+    if (!result || analysisLoading) return;
 
-    // 只有在数据加载完成且result存在且未生成分析时才调用
-    if (!hasLoaded) return;
-
-    if (result && !analysis && !analysisLoading && income.monthlySalary > 0) {
-      const callAnalysis = async () => {
-        console.log('Calling AI analysis...');
-        setAnalysisLoading(true);
-        setAnalysisError(null);
-        try {
-          const data = {
-            monthlySalary: income.monthlySalary,
-            bonus: income.bonus || 0,
-            takeHomePay: result.breakdown.takeHomePay,
-            yearlyTakeHome: result.wageResult.yearlyTakeHome,
-            realHourlyWage: result.wageResult.real,
-            nominalHourlyWage: result.wageResult.nominal,
-            totalYearlyWorkHours: result.wageResult.totalYearlyWorkHours,
-            dailyHours: timeCost.dailyHours,
-            averageOvertime: timeCost.averageOvertime,
-            commuteTimeOneWay: timeCost.commuteTimeOneWay,
-            monthlyCommuteCost: expenses.monthlyCommuteCost,
-            monthlyMealCost: expenses.monthlyMealCost,
-            otherExpensesTotal: expenses.otherExpenses.reduce((sum, item) => sum + item.amount, 0),
-            industry: result.industryComparison.industry,
-            industryAverage: result.industryComparison.averageHourlyWage,
-            diffPercentage: result.industryComparison.diffPercentage,
-          };
-
-          const analysisData = await generateAnalysisReport(data);
-          console.log('Analysis result:', analysisData);
-          setAnalysis(analysisData);
-        } catch (error) {
-          console.error('获取分析报告失败:', error);
-          setAnalysisError(error instanceof Error ? error.message : '未知错误');
-        } finally {
-          setAnalysisLoading(false);
-        }
+    setAnalysisLoading(true);
+    setAnalysisError(null);
+    try {
+      const data = {
+        monthlySalary: income.monthlySalary,
+        bonus: income.bonus || 0,
+        takeHomePay: result.breakdown.takeHomePay,
+        yearlyTakeHome: result.wageResult.yearlyTakeHome,
+        realHourlyWage: result.wageResult.real,
+        nominalHourlyWage: result.wageResult.nominal,
+        totalYearlyWorkHours: result.wageResult.totalYearlyWorkHours,
+        dailyHours: timeCost.dailyHours,
+        averageOvertime: timeCost.averageOvertime,
+        commuteTimeOneWay: timeCost.commuteTimeOneWay,
+        monthlyCommuteCost: expenses.monthlyCommuteCost,
+        monthlyMealCost: expenses.monthlyMealCost,
+        otherExpensesTotal: expenses.otherExpenses.reduce((sum, item) => sum + item.amount, 0),
+        industry: result.industryComparison.industry,
+        industryAverage: result.industryComparison.averageHourlyWage,
+        diffPercentage: result.industryComparison.diffPercentage,
       };
-      callAnalysis();
+
+      const analysisData = await generateAnalysisReport(data);
+      setAnalysis(analysisData);
+    } catch (error) {
+      console.error('获取分析报告失败:', error);
+      setAnalysisError(error instanceof Error ? error.message : '未知错误');
+    } finally {
+      setAnalysisLoading(false);
     }
-  }, [result, income, timeCost, expenses, hasLoaded]);
+  };
 
   // 初始化ECharts图表
   useEffect(() => {
@@ -487,18 +477,30 @@ function ResultPage() {
               </div>
             </div>
           ) : analysisError ? (
-            <div className="analysis-error">
-              <p className="error-text">生成分析报告失败: {analysisError}</p>
-              <p className="error-hint">请检查网络连接或稍后重试</p>
+            <div className="analysis-error" style={{ textAlign: 'center', padding: 'var(--spacing-lg)' }}>
+              <p style={{ color: '#EF4444', marginBottom: '16px' }}>❌ 生成失败: {analysisError}</p>
+              <button
+                className="btn btn-primary"
+                onClick={handleGenerateAnalysis}
+              >
+                🔄 重新生成
+              </button>
             </div>
           ) : (
-            <div className="analysis-empty">
-              <div className="loading-spinner">
-                <div className="spinner-circle"></div>
-                <div className="spinner-circle"></div>
-                <div className="spinner-circle"></div>
-              </div>
-              <p className="text-center">正在生成 AI 解读报告...</p>
+            <div className="analysis-empty" style={{ textAlign: 'center', padding: 'var(--spacing-lg)' }}>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '16px' }}>
+                🤖 AI 职场分析师已就绪
+              </p>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '14px' }}>
+                点击下方按钮，获取你的专属薪资解读报告
+              </p>
+              <button
+                className="btn btn-primary"
+                onClick={handleGenerateAnalysis}
+                style={{ fontSize: '16px', padding: '12px 32px' }}
+              >
+                ✨ 生成 AI 解读报告
+              </button>
             </div>
           )}
         </motion.div>
